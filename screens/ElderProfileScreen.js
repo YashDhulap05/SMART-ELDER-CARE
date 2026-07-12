@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { API_URL } from "../config";
 import { COLORS, globalStyles } from "../styles/theme";
 
-export default function ElderProfileScreen({ navigation }) {
+export default function ElderProfileScreen({ navigation, route }) {
+  const { guardianId } = route.params;
   const [elderName, setElderName] = useState("");
   const [elderAge, setElderAge] = useState("");
   const [caretakerName, setCaretakerName] = useState("");
@@ -16,7 +18,7 @@ export default function ElderProfileScreen({ navigation }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!elderName || !elderAge || !caretakerName || !caretakerPhone) {
       setErrorMsg("Please fill in all fields");
       setSuccessMsg("");
@@ -24,7 +26,6 @@ export default function ElderProfileScreen({ navigation }) {
     }
 
     const namePattern = /^[A-Za-z\s]+$/;
-
     if (!namePattern.test(elderName)) {
       setErrorMsg("Elder's name should only contain letters");
       setSuccessMsg("");
@@ -51,14 +52,36 @@ export default function ElderProfileScreen({ navigation }) {
       return;
     }
 
-    setErrorMsg("");
-    console.log("Elder profile saved:", {
-      elderName,
-      elderAge,
-      caretakerName,
-      caretakerPhone,
-    });
-    setSuccessMsg(`${elderName}'s profile has been created! 🎉`);
+    try {
+      const response = await fetch(`${API_URL}/elders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guardianId,
+          elderName,
+          elderAge: age,
+          caretakerName,
+          caretakerPhone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMsg(data.message || "Could not save profile");
+        setSuccessMsg("");
+        return;
+      }
+
+      setErrorMsg("");
+      setSuccessMsg(`${elderName}'s profile has been created! 🎉`);
+      setTimeout(() => {
+        navigation.navigate("Dashboard", { guardianId });
+      }, 1000);
+    } catch (error) {
+      setErrorMsg("Could not connect to server. Check your connection.");
+      setSuccessMsg("");
+    }
   };
 
   return (
